@@ -1,28 +1,18 @@
-import wget 
 import os
+import streamlit as st
+import gdown  # Import gdown library
 
-def bar_custom(current, total, width=80):
-    print("Downloading %d%% [%d / %d] bytes" % (current / total * 100, current, total))
-
-model_path = "/Users/bhavanshgali/Desktop/Trying a chatbot/llama-2-7b-chat.Q2_K.gguf"
-model_url = "https://huggingface.co/TheBloke/Llama-2-7B-Chat-GGUF/resolve/main/llama-2-7b-chat.Q2_K.gguf"
-
-# Check if the model file exists before downloading
-if not os.path.exists(model_path):
-    wget.download(model_url, model_path, bar=bar_custom)  # Download to the specified path
-
-import streamlit as st 
 from llama_index import (
-  SimpleDirectoryReader,
-  VectorStoreIndex,
-  ServiceContext,
+    SimpleDirectoryReader,
+    VectorStoreIndex,
+    ServiceContext,
 )
 from llama_index.llms import LlamaCPP
 from llama_index.llms.llama_utils import (
-  messages_to_prompt,
-  completion_to_prompt,
+    messages_to_prompt,
+    completion_to_prompt,
 )
-from langchain.schema import(SystemMessage, HumanMessage, AIMessage)
+from langchain.schema import (SystemMessage, HumanMessage, AIMessage)
 
 def init_page() -> None:
     st.set_page_config(
@@ -31,20 +21,34 @@ def init_page() -> None:
     st.header("Personal Chatbot")
     st.sidebar.title("Options")
 
-def select_llm() -> LlamaCPP:
-    return LlamaCPP(
-        model_path=model_path,
-        temperature=0.1,
-        max_new_tokens=500,
-        context_window=3900,
-        generate_kwargs={},
-        model_kwargs={"n_gpu_layers": 1},
-        messages_to_prompt=messages_to_prompt,
-        completion_to_prompt=completion_to_prompt,
-        verbose=True,
-    )
+def download_model(file_id, output_path):
+    gdown.download(f"https://drive.google.com/uc?id={file_id}", output_path, quiet=False)
 
-# Rest of your code remains unchanged...
+# Specify the file ID for the llama-2-7b-chat.Q2_K.gguf file on Google Drive
+file_id = "13tDZbrSRM7S0VakE6I8VUQexcrTzvVvT"
+
+# # Specify the local path where you want to save the downloaded model
+# model_path = "/Users/bhavanshgali/Desktop/chatbot/llama-2-7b-chat.Q2_K.gguf"
+
+# Check if the model file exists before downloading
+# if not os.path.exists(model_path):
+#     download_model(file_id, model_path)  # Download to the specified path
+
+def select_llm() -> LlamaCPP:
+    try:
+        return LlamaCPP(
+            temperature=0.1,
+            max_new_tokens=500,
+            context_window=3900,
+            generate_kwargs={},
+            model_kwargs={"n_gpu_layers": 1},
+            messages_to_prompt=messages_to_prompt,
+            completion_to_prompt=completion_to_prompt,
+            verbose=True,
+        )
+    except Exception as e:
+        st.error(f"Error initializing LlamaCPP: {e}")
+        return None
 
 
 def init_messages() -> None:
@@ -61,26 +65,31 @@ def get_answer(llm, messages) -> str:
   return response.text
 
 def main() -> None:
-  init_page()
-  llm = select_llm()
-  init_messages()
+    init_page()
+    llm = select_llm()
 
-  if user_input := st.chat_input("Input your question!"):
-    st.session_state.messages.append(HumanMessage(content=user_input))
-    with st.spinner("Bot is typing ..."):
-      answer = get_answer(llm, user_input)
-      print(answer)
-    st.session_state.messages.append(AIMessage(content=answer))
-    
+    if llm is None:
+        st.error("Failed to initialize LlamaCPP. Please check the error message above.")
+        return
 
-  messages = st.session_state.get("messages", [])
-  for message in messages:
-    if isinstance(message, AIMessage):
-      with st.chat_message("assistant"):
-        st.markdown(message.content)
-    elif isinstance(message, HumanMessage):
-      with st.chat_message("user"):
-        st.markdown(message.content)
+    init_messages()
+
+    if user_input := st.chat_input("Input your question!"):
+        st.session_state.messages.append(HumanMessage(content=user_input))
+        with st.spinner("Bot is typing ..."):
+            answer = get_answer(llm, user_input)
+            print(answer)
+        st.session_state.messages.append(AIMessage(content=answer))
+
+    messages = st.session_state.get("messages", [])
+    for message in messages:
+        if isinstance(message, AIMessage):
+            with st.chat_message("assistant"):
+                st.markdown(message.content)
+        elif isinstance(message, HumanMessage):
+            with st.chat_message("user"):
+                st.markdown(message.content)
+
 
 if __name__ == "__main__":
   main()
