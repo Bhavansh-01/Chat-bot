@@ -1,7 +1,7 @@
 gdown==3.13.0
-llama-index==0.1.54
-streamlit==1.15.1
-langchain==0.4.5
-wget==3.2
-cohere==0.4.35
-llama-cpp-python==0.1.54
+llama-index
+streamlit
+langchain
+wget
+cohere
+llama-cpp-python
